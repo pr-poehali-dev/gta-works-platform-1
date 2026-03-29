@@ -21,6 +21,11 @@ const navItems: { id: Page; label: string; icon: string }[] = [
 
 export default function AppLayout({ user, currentPage, onNavigate, onLogout, children }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const isAdmin = user.role === "admin";
+
+  const roleLabel = user.role === "employer" ? "Работодатель"
+    : user.role === "admin" ? "Администратор"
+    : "Соискатель";
 
   return (
     <div className="min-h-screen bg-background grid-bg flex">
@@ -45,15 +50,15 @@ export default function AppLayout({ user, currentPage, onNavigate, onLogout, chi
         </div>
 
         {/* User badge */}
-        <div className="px-4 py-3 mx-4 mt-4 rounded-xl bg-muted border border-border">
+        <div className={`px-4 py-3 mx-4 mt-4 rounded-xl border ${isAdmin ? "bg-neon-pink/10 border-neon-pink/20" : "bg-muted border-border"}`}>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-green to-neon-purple flex items-center justify-center flex-shrink-0">
-              <span className="text-xs font-bold text-background">{user.name.charAt(0)}</span>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isAdmin ? "bg-neon-pink text-white" : "bg-gradient-to-br from-neon-green to-neon-purple text-background"}`}>
+              <span className="text-xs font-bold">{user.name.charAt(0)}</span>
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground truncate">{user.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {user.role === "employer" ? "Работодатель" : "Соискатель"}
+              <p className={`text-xs ${isAdmin ? "text-neon-pink font-bold" : "text-muted-foreground"}`}>
+                {roleLabel}
               </p>
             </div>
           </div>
@@ -84,6 +89,29 @@ export default function AppLayout({ user, currentPage, onNavigate, onLogout, chi
               </button>
             );
           })}
+
+          {/* Admin section */}
+          {isAdmin && (
+            <>
+              <div className="pt-3 pb-1 px-3">
+                <p className="text-[10px] text-neon-pink font-bold uppercase tracking-widest">Администрирование</p>
+              </div>
+              <button
+                onClick={() => { onNavigate("admin"); setMobileOpen(false); }}
+                className={`
+                  w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+                  transition-all duration-200
+                  ${currentPage === "admin"
+                    ? "bg-neon-pink text-white font-semibold"
+                    : "text-muted-foreground hover:text-neon-pink hover:bg-neon-pink/10"
+                  }
+                `}
+              >
+                <Icon name="ShieldAlert" size={18} />
+                Панель админа
+              </button>
+            </>
+          )}
         </nav>
 
         {/* Logout */}
@@ -114,8 +142,8 @@ export default function AppLayout({ user, currentPage, onNavigate, onLogout, chi
             <Icon name="Menu" size={22} />
           </button>
           <span className="font-unbounded font-bold text-sm text-neon-green text-glow-green">GTA Works</span>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-green to-neon-purple flex items-center justify-center">
-            <span className="text-xs font-bold text-background">{user.name.charAt(0)}</span>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isAdmin ? "bg-neon-pink" : "bg-gradient-to-br from-neon-green to-neon-purple"}`}>
+            <span className="text-xs font-bold text-white">{user.name.charAt(0)}</span>
           </div>
         </header>
 

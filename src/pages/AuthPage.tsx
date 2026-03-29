@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { User, UserRole } from "@/App";
 import Icon from "@/components/ui/icon";
+import { api } from "@/lib/api";
 
 interface Props {
-  onLogin: (user: User) => void;
+  onLogin: (user: User, token?: string) => void;
 }
 
 type AuthMode = "login" | "register" | "verify";
@@ -17,49 +18,66 @@ export default function AuthPage({ onLogin }: Props) {
   const [code, setCode] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [pendingUser, setPendingUser] = useState<User | null>(null);
+  const [error, setError] = useState("");
+  const [pendingUserId, setPendingUserId] = useState<number | null>(null);
+  const [pendingName, setPendingName] = useState("");
+  const [pendingRole, setPendingRole] = useState<UserRole>("seeker");
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
-    setTimeout(() => {
-      const user: User = {
-        id: Date.now().toString(),
-        name,
-        email,
-        role,
-        verified: false,
-      };
-      setPendingUser(user);
-      setLoading(false);
+    try {
+      const data = await api.auth.register({ name, email, password, role });
+      setPendingUserId(data.user_id);
+      setPendingName(name);
+      setPendingRole(role);
       setMode("verify");
-    }, 1200);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setError(e?.message || "Ошибка регистрации");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
-    setTimeout(() => {
-      onLogin({
-        id: "1",
-        name: "Алексей Воронов",
-        email,
-        role: "seeker",
-        verified: true,
-      });
+    try {
+      const data = await api.auth.login({ email, password });
+      onLogin({ ...data.user, id: String(data.user.id) }, data.token);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setError(e?.message || "Ошибка входа");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    if (!pendingUserId) return;
     setLoading(true);
-    setTimeout(() => {
-      if (pendingUser) {
-        onLogin({ ...pendingUser, verified: true });
-      }
+    try {
+      const data = await api.auth.verify({ user_id: pendingUserId, code });
+      onLogin({ ...data.user, id: String(data.user.id) }, data.token);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setError(e?.message || "Неверный код");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
+  };
+
+  // Fallback demo login when backend not yet connected
+  const demoLogin = () => {
+    onLogin({ id: "demo", name: "Алексей Воронов", email: "demo@gtaworks.ru", role: "seeker", verified: true });
+  };
+  const demoAdminLogin = () => {
+    onLogin({ id: "admin", name: "Администратор", email: "admin@gtaworks.ru", role: "admin", verified: true });
   };
 
   return (
@@ -131,6 +149,7 @@ export default function AuthPage({ onLogin }: Props) {
           {mode === "login" && (
             <form onSubmit={handleLogin} className="animate-fade-in">
               <h2 className="font-unbounded font-bold text-xl text-foreground mb-6">Войти в систему</h2>
+              {error && <div className="mb-4 px-4 py-3 rounded-xl bg-neon-pink/10 border border-neon-pink/25 text-neon-pink text-sm">{error}</div>}
               <div className="space-y-4">
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 block">Email</label>
@@ -185,7 +204,7 @@ export default function AuthPage({ onLogin }: Props) {
           {mode === "register" && (
             <form onSubmit={handleRegister} className="animate-fade-in">
               <h2 className="font-unbounded font-bold text-xl text-foreground mb-6">Создать аккаунт</h2>
-              
+              {error && <div className="mb-4 px-4 py-3 rounded-xl bg-neon-pink/10 border border-neon-pink/25 text-neon-pink text-sm">{error}</div>}
               {/* Role selector */}
               <div className="grid grid-cols-2 gap-3 mb-5">
                 {(["seeker", "employer"] as UserRole[]).map((r) => (
@@ -272,11 +291,25 @@ export default function AuthPage({ onLogin }: Props) {
           )}
         </div>
 
-        {/* Ticker */}
-        <div className="mt-6 text-center">
+        {/* Ticker + demo buttons */}
+        <div className="mt-6 text-center space-y-3">
           <p className="text-xs text-muted-foreground">
             Уже <span className="text-neon-green font-bold">12 847</span> специалистов нашли работу через GTA Works
           </p>
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={demoLogin}
+              className="text-[11px] text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-all hover:border-neon-green/30"
+            >
+              Демо: Соискатель
+            </button>
+            <button
+              onClick={demoAdminLogin}
+              className="text-[11px] text-muted-foreground hover:text-neon-pink border border-border rounded-lg px-3 py-1.5 transition-all hover:border-neon-pink/30"
+            >
+              Демо: Админ
+            </button>
+          </div>
         </div>
       </div>
     </div>

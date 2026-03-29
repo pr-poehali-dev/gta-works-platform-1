@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Admin no token",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 403,
+      "expectedBody": {"error": "Доступ запрещён. Только администраторы."},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
